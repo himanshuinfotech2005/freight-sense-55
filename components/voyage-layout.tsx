@@ -58,6 +58,8 @@ export default function VoyageLayout({ children }: { children: React.ReactNode }
   const { state, result, outputs, updateState, reset } = useVoyage()
   const [inputsOpen, setInputsOpen] = useState(false)
   const [draft, setDraft] = useState(state)
+  const [draftFixtureId, setDraftFixtureId] = useState('VQ-2026-002')
+  const [newDraftMode, setNewDraftMode] = useState(false)
 
   useEffect(() => {
     if (!inputsOpen) setDraft(state)
@@ -65,10 +67,17 @@ export default function VoyageLayout({ children }: { children: React.ReactNode }
 
   const active = pathname === '/' ? '/overview' : pathname
   const preview = calculatePreview(draft, state, result)
+  const openNewFixture = () => {
+    const nextId = `VQ-2026-${String(Number(state.fixtureId?.split('-').pop() ?? '1') + 1).padStart(3, '0')}`
+    setNewDraftMode(true)
+    setDraftFixtureId(nextId)
+    setDraft({ ...state, fixtureId: nextId, isDraft: true })
+    setInputsOpen(true)
+  }
   const applyInputs = () => {
-    updateState(draft)
+    updateState({ ...draft, fixtureId: newDraftMode ? draftFixtureId : state.fixtureId, isDraft: newDraftMode })
     setInputsOpen(false)
-    showToast('Scenario updated')
+    showToast(`${draftFixtureId} draft recalculated`)
   }
   const current = navItems.find((item) => item.href === active) ?? navItems[0]
 
@@ -104,7 +113,7 @@ export default function VoyageLayout({ children }: { children: React.ReactNode }
 
         <div className="px-5 py-5">
           <button
-            onClick={() => showToast('New fixture simulation opened')}
+            onClick={openNewFixture}
             className="flex w-full items-center justify-center gap-2 rounded-md bg-[#087cb8] px-3 py-3 text-xs font-semibold shadow-lg shadow-black/10"
           >
             <Sparkles className="size-4" /> New Fixture Simulation
@@ -184,8 +193,8 @@ export default function VoyageLayout({ children }: { children: React.ReactNode }
                 <CircleHelp className="size-4" />
               </button>
               <div className="hidden h-7 w-px bg-[#e3e8ef] sm:block" />
-              <button
-                onClick={() => { setDraft(state); setInputsOpen(true) }}
+                <button
+                onClick={() => { setNewDraftMode(false); setDraft(state); setDraftFixtureId(state.fixtureId); setInputsOpen(true) }}
                 className="flex items-center gap-2 rounded-md border border-[#cbd9e7] bg-white px-3 py-2 text-[11px] font-semibold text-[#0b1f3a]"
               >
                 <SlidersHorizontal className="size-3.5 text-[#087cb8]" /> Edit Inputs
@@ -207,7 +216,7 @@ export default function VoyageLayout({ children }: { children: React.ReactNode }
             <button aria-label="Close scenario inputs" onClick={() => setInputsOpen(false)} className="fixed inset-0 z-40 bg-[#071426]/35" />
             <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[430px] flex-col border-l border-[#d8dee8] bg-white shadow-2xl">
               <div className="flex items-center justify-between border-b border-[#e7edf3] px-6 py-5">
-                <div><div className="text-[10px] font-bold uppercase tracking-[.16em] text-[#087cb8]">Scenario control</div><h2 className="mt-1 text-lg font-bold text-[#0b1f3a]">Edit voyage inputs</h2></div>
+                <div><div className="text-[10px] font-bold uppercase tracking-[.16em] text-[#087cb8]">Scenario control</div><h2 className="mt-1 text-lg font-bold text-[#0b1f3a]">Edit voyage inputs</h2><div className="mt-1 font-mono text-[10px] font-semibold text-[#0c9b86]">{draftFixtureId} · DRAFT SIMULATION</div></div>
                 <button aria-label="Close" onClick={() => setInputsOpen(false)} className="rounded-md p-2 text-[#718095] hover:bg-[#f1f5f9]"><X className="size-4" /></button>
               </div>
               <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -218,10 +227,11 @@ export default function VoyageLayout({ children }: { children: React.ReactNode }
                   <label className="flex flex-col gap-1.5 text-[10px] font-semibold uppercase tracking-[.1em] text-[#718095]">Preferred Vessel<select value={draft.vesselPreference} onChange={(e) => setDraft({ ...draft, vesselPreference: e.target.value as VesselType })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-sm font-normal normal-case tracking-normal text-[#0b1f3a] outline-none focus:border-[#087cb8]"><option>Auto Select</option><option>Handysize</option><option>Supramax</option><option>Panamax</option><option>Capesize</option></select></label>
                   <div className="grid grid-cols-2 gap-3"><label className="flex flex-col gap-1.5 text-[10px] font-semibold uppercase tracking-[.1em] text-[#718095]">Market<select value={draft.marketCondition} onChange={(e) => setDraft({ ...draft, marketCondition: e.target.value as MarketCondition })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-sm font-normal normal-case tracking-normal text-[#0b1f3a] outline-none focus:border-[#087cb8]"><option>Falling</option><option>Stable</option><option>Rising</option></select></label><label className="flex flex-col gap-1.5 text-[10px] font-semibold uppercase tracking-[.1em] text-[#718095]">Congestion<select value={draft.portCongestion} onChange={(e) => setDraft({ ...draft, portCongestion: e.target.value as Congestion })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-sm font-normal normal-case tracking-normal text-[#0b1f3a] outline-none focus:border-[#087cb8]"><option>Low</option><option>Medium</option><option>High</option></select></label></div>
                   <label className="flex flex-col gap-1.5 text-[10px] font-semibold uppercase tracking-[.1em] text-[#718095]">Vessel Availability: {draft.vesselAvailability}%<input type="range" min="10" max="95" value={draft.vesselAvailability} onChange={(e) => setDraft({ ...draft, vesselAvailability: Number(e.target.value) })} className="accent-[#087cb8]" /></label>
+                  <label className="flex flex-col gap-1.5 text-[10px] font-semibold uppercase tracking-[.1em] text-[#718095]">Laycan Window<select value={draft.laycanWindow} onChange={(e) => setDraft({ ...draft, laycanWindow: e.target.value })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-sm font-normal normal-case tracking-normal text-[#0b1f3a] outline-none focus:border-[#087cb8]"><option>12–15 Oct 2026</option><option>18–22 Oct 2026</option><option>24–28 Oct 2026</option></select></label>
                 </div>
                 <div className="mt-6 rounded-md border border-[#cfe5e1] bg-[#f1fbf8] p-4"><div className="text-[10px] font-bold uppercase tracking-[.12em] text-[#087d69]">Scenario impact preview</div><div className="mt-3 grid grid-cols-3 gap-2 text-center"><div><div className="font-mono text-sm font-semibold text-[#0b1f3a]">{preview.freightDelta > 0 ? '+' : ''}{preview.freightDelta}%</div><div className="text-[10px] text-[#718095]">Freight</div></div><div><div className="font-mono text-sm font-semibold text-[#0b1f3a]">+{preview.riskDelta}</div><div className="text-[10px] text-[#718095]">Risk</div></div><div><div className="font-mono text-sm font-semibold text-[#0b1f3a]">{preview.vessel}</div><div className="text-[10px] text-[#718095]">Best vessel</div></div></div></div>
               </div>
-              <div className="flex gap-3 border-t border-[#e7edf3] p-6"><button onClick={() => { reset(); setInputsOpen(false); showToast('Scenario reset') }} className="flex-1 rounded-md border border-[#cbd9e7] px-4 py-2.5 text-xs font-semibold text-[#0b1f3a]">Reset</button><button onClick={applyInputs} className="flex-1 rounded-md bg-[#087cb8] px-4 py-2.5 text-xs font-semibold text-white">Apply Changes</button></div>
+              <div className="flex gap-3 border-t border-[#e7edf3] p-6"><button onClick={() => { setDraft({ ...state, fixtureId: newDraftMode ? draftFixtureId : state.fixtureId, isDraft: newDraftMode }); showToast('Draft inputs reset') }} className="flex-1 rounded-md border border-[#cbd9e7] px-4 py-2.5 text-xs font-semibold text-[#0b1f3a]">Reset</button><button onClick={applyInputs} className="flex-1 rounded-md bg-[#087cb8] px-4 py-2.5 text-xs font-semibold text-white">Apply Changes</button></div>
             </aside>
           </>
         )}
