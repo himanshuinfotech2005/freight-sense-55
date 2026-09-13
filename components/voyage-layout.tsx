@@ -55,7 +55,8 @@ export default function VoyageLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [toast, setToast] = useState('')
-  const { state, result, outputs, updateState, reset } = useVoyage()
+  const { state, result, outputs, updateState, reset, executeFixture, executionStatus } = useVoyage()
+  const [executing, setExecuting] = useState(false)
   const [inputsOpen, setInputsOpen] = useState(false)
   const [draft, setDraft] = useState(state)
   const [draftFixtureId, setDraftFixtureId] = useState('VQ-2026-002')
@@ -200,10 +201,17 @@ export default function VoyageLayout({ children }: { children: React.ReactNode }
                 <SlidersHorizontal className="size-3.5 text-[#087cb8]" /> Edit Inputs
               </button>
               <button
-                onClick={() => showToast('Charter execution queued for review')}
+                onClick={() => {
+                  if (executing) return
+                  setExecuting(true)
+                  executeFixture()
+                  setExecuting(false)
+                  showToast('Fixture executed successfully · Decision pipeline recalculated')
+                }}
+                aria-label="Execute current voyage fixture"
                 className="hidden items-center gap-2 rounded-md bg-[#0b1f3a] px-3 py-2 text-[11px] font-semibold text-white sm:flex"
               >
-                <Zap className="size-3.5 text-[#58c7b3]" /> Execute Fixture
+                <Zap className="size-3.5 text-[#58c7b3]" /> {executing ? 'Executing Fixture...' : executionStatus === 'EXECUTED' ? '✓ Fixture Executed' : 'Execute Fixture'}
               </button>
             </div>
           </div>
