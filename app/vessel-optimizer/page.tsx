@@ -1,2 +1,2 @@
-import VoyageIQDashboard from '@/components/voyageiq-dashboard'
-export default function VesselOptimizerPage() { return <VoyageIQDashboard /> }
+import { VesselOptimizerPage } from '@/components/voyage-module-pages'
+export default function VesselOptimizerRoute() { return <VesselOptimizerPage /> }

@@ -1,2 +1,2 @@
-import VoyageIQDashboard from '@/components/voyageiq-dashboard'
-export default function RiskIntelligencePage() { return <VoyageIQDashboard /> }
+import { RiskIntelligencePage } from '@/components/voyage-module-pages'
+export default function RiskIntelligenceRoute() { return <RiskIntelligencePage /> }

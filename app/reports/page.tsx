@@ -1,2 +1,2 @@
-import VoyageIQDashboard from '@/components/voyageiq-dashboard'
-export default function ReportsPage() { return <VoyageIQDashboard /> }
+import { ReportsPage } from '@/components/voyage-module-pages'
+export default function ReportsRoute() { return <ReportsPage /> }

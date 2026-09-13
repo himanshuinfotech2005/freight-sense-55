@@ -1,2 +1,2 @@
-import VoyageIQDashboard from '@/components/voyageiq-dashboard'
-export default function CharterStrategyPage() { return <VoyageIQDashboard /> }
+import { CharterStrategyPage } from '@/components/voyage-module-pages'
+export default function CharterStrategyRoute() { return <CharterStrategyPage /> }

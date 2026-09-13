@@ -1,2 +1,2 @@
-import VoyageIQDashboard from '@/components/voyageiq-dashboard'
-export default function CostOptimizationPage() { return <VoyageIQDashboard /> }
+import { CostOptimizationPage } from '@/components/voyage-module-pages'
+export default function CostOptimizationRoute() { return <CostOptimizationPage /> }
