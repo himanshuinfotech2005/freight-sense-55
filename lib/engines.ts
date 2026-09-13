@@ -13,8 +13,22 @@ export type Vessel = typeof VESSELS[number]
 export const clamp = (value: number, min = 0, max = 100) => Math.max(min, Math.min(max, value))
 const horizon = (range: ForecastRange) => range === '7D' ? 7 : range === '15D' ? 15 : 30
 
-export function calculateFreight(cargo: number, market: MarketCondition, range: ForecastRange) {
-  const current = 20.65 + Math.min(2.4, Math.max(-1.7, (cargo - 80000) / 52000))
+const commodityFactor = (commodity: string) => ({
+  'Thermal Coal': 1,
+  'Coking Coal': 1.12,
+  'Iron Ore': 0.86,
+  Bauxite: 0.94,
+  Grain: 1.06,
+}[commodity] ?? 1)
+
+const routeFactor = (origin: string, destination: string) => {
+  const originFactor = origin.includes('Newcastle') ? 0.92 : origin.includes('Richards Bay') ? 1.08 : origin.includes('Taboneo') ? 0.97 : origin.includes('Samarinda') ? 1.03 : 1
+  const destinationFactor = destination.includes('Mundra') ? 1.08 : destination.includes('Krishnapatnam') ? 1.04 : destination.includes('Kandla') ? 1.12 : destination.includes('Visakhapatnam') ? 0.96 : 1
+  return originFactor * destinationFactor
+}
+
+export function calculateFreight(cargo: number, market: MarketCondition, range: ForecastRange, origin = 'Muara Berau, Indonesia', destination = 'Paradip Port, India', commodity = 'Thermal Coal') {
+  const current = (20.65 + Math.min(2.4, Math.max(-1.7, (cargo - 80000) / 52000))) * commodityFactor(commodity) * routeFactor(origin, destination)
   const direction = market === 'Rising' ? 1.35 : market === 'Falling' ? -1.15 : -0.32
   const days = horizon(range)
   const forecast = current + direction * days / 30
@@ -77,8 +91,9 @@ export function calculateStrategy(freightChange: number, confidence: number, ris
 }
 
 export function calculateVoyage(input: { cargoQuantity: number; origin: string; destination: string; vesselPreference: VesselType; marketCondition: MarketCondition; portCongestion: Congestion; forecastRange: ForecastRange; contractDuration: string; vesselAvailability: number }) {
-  const freight = calculateFreight(input.cargoQuantity, input.marketCondition, input.forecastRange)
-  const ranked = rankVessels(input.cargoQuantity, input.vesselPreference, input.portCongestion, input.vesselAvailability)
+  const freight = calculateFreight(input.cargoQuantity, input.marketCondition, input.forecastRange, input.origin, input.destination, input.commodity)
+  const commodityFit = input.commodity === 'Iron Ore' ? 1.08 : input.commodity === 'Bauxite' ? 0.96 : input.commodity === 'Grain' ? 0.92 : 1
+  const ranked = rankVessels(input.cargoQuantity * commodityFit, input.vesselPreference, input.portCongestion, input.vesselAvailability)
   const selected = input.vesselPreference === 'Auto Select' ? ranked[0] : ranked.find((vessel) => vessel.name === input.vesselPreference) ?? ranked[0]
   const port = calculatePort(selected, input.destination, input.cargoQuantity)
   const risk = calculateRisk(input.marketCondition, input.portCongestion, selected.availability, freight.change, port.score, input.cargoQuantity)
