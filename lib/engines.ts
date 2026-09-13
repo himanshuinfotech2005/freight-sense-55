@@ -94,7 +94,7 @@ export function calculateStrategy(freightChange: number, confidence: number, ris
   return { recommendation, lockPercentage, expectedSavings, reasons: [`${freightChange < 0 ? 'Softening' : freightChange > 0 ? 'Rising' : 'Stable'} freight curve`, `${confidence}% model confidence`, `Risk score ${risk}/100`] }
 }
 
-export function calculateVoyage(input: { cargoQuantity: number; origin: string; destination: string; commodity: string; vesselPreference: VesselType; marketCondition: MarketCondition; portCongestion: Congestion; forecastRange: ForecastRange; contractDuration: string; vesselAvailability: number }) {
+export function calculateVoyage(input: { cargoQuantity: number; origin: string; destination: string; commodity: string; vesselPreference: VesselType; marketCondition: MarketCondition; portCongestion: Congestion; forecastRange: ForecastRange; contractDuration: string; vesselAvailability: number; laycanStart?: string; laycanEnd?: string }) {
   const freight = calculateFreight(input.cargoQuantity, input.marketCondition, input.forecastRange, input.origin, input.destination, input.commodity, input.laycanStart, input.laycanEnd)
   const commodityFit = input.commodity === 'Iron Ore' ? 1.08 : input.commodity === 'Bauxite' ? 0.96 : input.commodity === 'Grain' ? 0.92 : 1
   const ranked = rankVessels(input.cargoQuantity * commodityFit, input.vesselPreference, input.portCongestion, input.vesselAvailability)
@@ -107,7 +107,7 @@ export function calculateVoyage(input: { cargoQuantity: number; origin: string; 
 }
 
 export type VoyageResult = ReturnType<typeof calculateVoyage>
-export const riskTone = (score: number) => score < 30 ? 'green' : score < 50 ? 'yellow' : score < 70 ? 'orange' : score < 85 ? 'red' : 'darkred'
+export const riskTone = (score: number) => score <= 25 ? 'green' : score <= 50 ? 'yellow' : score <= 75 ? 'orange' : 'red'
 export const delayFor = (congestion: Congestion) => congestion === 'High' ? 3.4 : congestion === 'Medium' ? 2.1 : 1.2
 
 export function chartData(freight: ReturnType<typeof calculateFreight>, range: ForecastRange) {
@@ -121,6 +121,6 @@ export type VoyageState = typeof defaultVoyage
 export function getVoyageResult(state: VoyageState) { return calculateVoyage(state) }
 
 export function formatMoney(value: number) { return `$${(value / 1000000).toFixed(2)}M` }
-export function formatRisk(score: number) { return score < 30 ? 'Low' : score < 50 ? 'Moderate' : score < 70 ? 'Elevated' : 'High' }
+export function formatRisk(score: number) { return score <= 25 ? 'Low' : score <= 50 ? 'Moderate' : score <= 75 ? 'High' : 'Critical' }
 export function formatStatus(status: string) { return status }
 export function scoreColor(score: number) { const tone = riskTone(score); return tone === 'green' ? '#087d69' : tone === 'yellow' ? '#c99500' : tone === 'orange' ? '#db7b16' : tone === 'red' ? '#c54d3c' : '#8c2635' }
