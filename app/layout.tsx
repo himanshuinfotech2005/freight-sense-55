@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import { VoyageProvider } from '@/lib/voyage-context'
 
 export const metadata: Metadata = {
   title: 'VoyageIQ | Maritime AI Decision Support',
@@ -41,7 +42,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <VoyageProvider>
+          {children}
+        </VoyageProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
