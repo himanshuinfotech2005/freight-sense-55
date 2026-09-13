@@ -100,8 +100,8 @@ export default function VoyageLayout({ children }: { children: React.ReactNode }
               <span className="flex size-7 items-center justify-center rounded-md bg-[#087cb8]">
                 <Anchor className="size-4" />
               </span>
-              VOYAGE
-              <span className="text-[#58c7b3]">IQ</span>
+              FREIGHT
+              <span className="text-[#58c7b3]">SENSE</span>
             </div>
             <div className="mt-1 text-[9px] font-semibold tracking-[.18em] text-white/45">
               MARITIME AI DECISION SUPPORT
@@ -180,7 +180,7 @@ export default function VoyageLayout({ children }: { children: React.ReactNode }
               <Menu className="size-5 text-[#0b1f3a]" />
             </button>
             <div className="hidden items-center gap-2 text-xs text-[#718095] md:flex">
-              <span className="font-semibold text-[#0b1f3a]">VoyageIQ</span>
+              <span className="font-semibold text-[#0b1f3a]">Freight Sense</span>
               <ChevronRight className="size-3" />
               <span>{current.label}</span>
               <ChevronRight className="size-3" />
