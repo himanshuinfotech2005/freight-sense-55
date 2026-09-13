@@ -1,0 +1,28 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { Check, X } from 'lucide-react'
+import { useVoyage } from '@/lib/voyage-context'
+import type { Congestion, MarketCondition, VesselType } from '@/lib/engines'
+
+export default function ScenarioInputDrawer({ open, onClose, onApplied }: { open: boolean; onClose: () => void; onApplied: () => void }) {
+  const { state, updateState, reset } = useVoyage()
+  const [draft, setDraft] = useState(state)
+  useEffect(() => { if (open) setDraft(state) }, [open, state])
+  if (!open) return null
+  const set = (updates: Partial<typeof draft>) => setDraft((value) => ({ ...value, ...updates }))
+  return <>
+    <button aria-label="Close scenario inputs" onClick={onClose} className="fixed inset-0 z-40 bg-[#071426]/35" />
+    <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[430px] flex-col border-l border-[#d8dee8] bg-white text-[#0b1f3a] shadow-2xl">
+      <div className="flex items-center justify-between border-b border-[#e7edf3] px-6 py-5"><div><div className="text-[10px] font-bold uppercase tracking-[.16em] text-[#087cb8]">Scenario control</div><h2 className="mt-1 text-lg font-bold">Edit voyage inputs</h2></div><button aria-label="Close" onClick={onClose} className="rounded-md p-2 text-[#718095] hover:bg-[#f1f5f9]"><X className="size-4" /></button></div>
+      <div className="flex-1 overflow-y-auto px-6 py-5"><div className="grid gap-4">
+        {([['Origin Port', 'origin'], ['Destination Port', 'destination'], ['Commodity', 'commodity']] as const).map(([label, key]) => <label key={key} className="flex flex-col gap-1.5 text-[10px] font-semibold uppercase tracking-[.1em] text-[#718095]">{label}<input value={draft[key]} onChange={(e) => set({ [key]: e.target.value })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-sm font-normal normal-case tracking-normal outline-none focus:border-[#087cb8]" /></label>)}
+        <label className="flex flex-col gap-1.5 text-[10px] font-semibold uppercase tracking-[.1em] text-[#718095]">Cargo Quantity (MT)<input type="number" min="1" value={draft.cargoQuantity} onChange={(e) => set({ cargoQuantity: Math.max(1, Number(e.target.value) || 1) })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 font-mono text-sm font-normal normal-case tracking-normal outline-none focus:border-[#087cb8]" /></label>
+        <div className="grid grid-cols-2 gap-3"><label className="flex flex-col gap-1.5 text-[10px] font-semibold uppercase tracking-[.1em] text-[#718095]">Preferred Vessel<select value={draft.vesselPreference} onChange={(e) => set({ vesselPreference: e.target.value as VesselType })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-xs font-normal normal-case tracking-normal outline-none"><option>Auto Select</option><option>Handysize</option><option>Supramax</option><option>Panamax</option><option>Capesize</option></select></label><label className="flex flex-col gap-1.5 text-[10px] font-semibold uppercase tracking-[.1em] text-[#718095]">Market<select value={draft.marketCondition} onChange={(e) => set({ marketCondition: e.target.value as MarketCondition })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-xs font-normal normal-case tracking-normal outline-none"><option>Falling</option><option>Stable</option><option>Rising</option></select></label></div>
+        <div className="grid grid-cols-2 gap-3"><label className="flex flex-col gap-1.5 text-[10px] font-semibold uppercase tracking-[.1em] text-[#718095]">Congestion<select value={draft.portCongestion} onChange={(e) => set({ portCongestion: e.target.value as Congestion })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-xs font-normal normal-case tracking-normal outline-none"><option>Low</option><option>Medium</option><option>High</option></select></label><label className="flex flex-col gap-1.5 text-[10px] font-semibold uppercase tracking-[.1em] text-[#718095]">Contract<select value={draft.contractDuration} onChange={(e) => set({ contractDuration: e.target.value })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-xs font-normal normal-case tracking-normal outline-none"><option>Short-Term</option><option>Long-Term</option></select></label></div>
+        <label className="flex flex-col gap-1.5 text-[10px] font-semibold uppercase tracking-[.1em] text-[#718095]">Vessel Availability: {draft.vesselAvailability}%<input type="range" min="10" max="95" value={draft.vesselAvailability} onChange={(e) => set({ vesselAvailability: Number(e.target.value) })} className="accent-[#087cb8]" /></label>
+      </div><div className="mt-6 rounded-md border border-[#cfe5e1] bg-[#f1fbf8] p-4 text-xs"><div className="font-bold uppercase tracking-[.12em] text-[#087d69]">Scenario Impact Preview</div><div className="mt-2 text-[#52657b]">Changes recalculate freight, vessel fit, risk, cost, and charter strategy across the application.</div></div></div>
+      <div className="flex gap-3 border-t border-[#e7edf3] p-6"><button onClick={() => { reset(); onClose() }} className="flex-1 rounded-md border border-[#cbd9e7] px-4 py-2.5 text-xs font-semibold">Reset</button><button onClick={() => { updateState(draft); onClose(); onApplied() }} className="flex-1 rounded-md bg-[#087cb8] px-4 py-2.5 text-xs font-semibold text-white"><Check className="mr-1 inline size-3.5" />Apply Changes</button></div>
+    </aside>
+  </>
+}
