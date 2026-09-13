@@ -27,15 +27,19 @@ const routeFactor = (origin: string, destination: string) => {
   return originFactor * destinationFactor
 }
 
-export function calculateFreight(cargo: number, market: MarketCondition, range: ForecastRange, origin = 'Muara Berau, Indonesia', destination = 'Paradip Port, India', commodity = 'Thermal Coal') {
+export function calculateFreight(cargo: number, market: MarketCondition, range: ForecastRange, origin = 'Muara Berau, Indonesia', destination = 'Paradip Port, India', commodity = 'Thermal Coal', laycanStart = '2026-10-12', laycanEnd = '2026-10-15') {
   const current = (20.65 + Math.min(2.4, Math.max(-1.7, (cargo - 80000) / 52000))) * commodityFactor(commodity) * routeFactor(origin, destination)
-  const direction = market === 'Rising' ? 1.35 : market === 'Falling' ? -1.15 : -0.32
-  const days = horizon(range)
-  const forecast = current + direction * days / 30
+  const laycanDays = Math.max(0, Math.round((new Date(`${laycanEnd}T00:00:00`).getTime() - new Date(`${laycanStart}T00:00:00`).getTime()) / 86400000))
+  const daysUntilLaycan = Math.max(0, Math.round((new Date(`${laycanStart}T00:00:00`).getTime() - new Date('2026-10-01T00:00:00').getTime()) / 86400000))
+  const urgency = clamp(72 - daysUntilLaycan * .9 + Math.max(0, 5 - laycanDays) * 4, 8, 86)
+  const direction = market === 'Rising' ? 1.35 : market === 'Falling' ? -1.15 : -.32
+  const days = Math.max(horizon(range), Math.min(45, daysUntilLaycan + laycanDays))
+  const forecast = current + direction * days / 30 + urgency * .012
+
   const confidence = clamp(94 - days * .16 - (market === 'Stable' ? 0 : 4) - Math.abs(cargo - 80000) / 50000)
   const historical = Array.from({ length: 7 }, (_, index) => Number((current - .62 + index * .1 + Math.sin((cargo / 18000 + index) * .8) * .12).toFixed(2)))
   const points = [...historical, Number(forecast.toFixed(2))]
-  return { current: Number(current.toFixed(2)), forecast: Number(forecast.toFixed(2)), change: Number((((forecast - current) / current) * 100).toFixed(1)), confidence: Math.round(confidence), historical, points, trend: direction > .2 ? 'Rising' : direction < -.2 ? 'Falling' : 'Stable' as MarketCondition }
+  return { current: Number(current.toFixed(2)), forecast: Number(forecast.toFixed(2)), change: Number((((forecast - current) / current) * 100).toFixed(1)), confidence: Math.round(confidence), historical, points, trend: direction > .2 ? 'Rising' : direction < -.2 ? 'Falling' : 'Stable' as MarketCondition, urgency }
 }
 
 export function rankVessels(cargo: number, preferred: VesselType, congestion: Congestion, availabilityOverride = 18) {
@@ -83,22 +87,22 @@ export function calculateCost(cargo: number, freight: number, vessel: Vessel, ri
   return { freightCost, bunkerCost, portCost, delayCost, idleCost, deadheadingCost, riskPenalty, total, costPerMT: total / cargo }
 }
 
-export function calculateStrategy(freightChange: number, confidence: number, risk: number, cargo: number, costPerMT: number, contractDuration: string, availability: number, congestion: Congestion) {
-  const recommendation = freightChange > 4 || (freightChange > 1 && risk > 48) ? 'BUY NOW' : freightChange < -3.5 && confidence > 84 ? 'WAIT' : contractDuration === 'Long-Term' && costPerMT < 25 ? 'MULTI-VOYAGE CONTRACT' : congestion === 'High' || availability < 35 ? 'PARTIAL LOCK' : 'PARTIAL LOCK'
-  const lockPercentage = recommendation === 'BUY NOW' ? 85 : recommendation === 'WAIT' ? 20 : recommendation === 'MULTI-VOYAGE CONTRACT' ? 75 : 60
+export function calculateStrategy(freightChange: number, confidence: number, risk: number, cargo: number, costPerMT: number, contractDuration: string, availability: number, congestion: Congestion, laycanUrgency = 50) {
+  const recommendation = freightChange > 4 || (freightChange > 1 && risk > 48) || laycanUrgency > 72 ? 'BUY NOW' : freightChange < -3.5 && confidence > 84 && laycanUrgency < 38 ? 'WAIT' : contractDuration === 'Long-Term' && costPerMT < 25 ? 'MULTI-VOYAGE CONTRACT' : congestion === 'High' || availability < 35 ? 'PARTIAL LOCK' : 'PARTIAL LOCK'
+  const lockPercentage = recommendation === 'BUY NOW' ? Math.min(92, 78 + Math.round(laycanUrgency / 10)) : recommendation === 'WAIT' ? 20 : recommendation === 'MULTI-VOYAGE CONTRACT' ? 75 : Math.max(45, 52 + Math.round(laycanUrgency / 8))
   const expectedSavings = Math.round(Math.abs(freightChange) / 100 * cargo * .55)
   return { recommendation, lockPercentage, expectedSavings, reasons: [`${freightChange < 0 ? 'Softening' : freightChange > 0 ? 'Rising' : 'Stable'} freight curve`, `${confidence}% model confidence`, `Risk score ${risk}/100`] }
 }
 
 export function calculateVoyage(input: { cargoQuantity: number; origin: string; destination: string; commodity: string; vesselPreference: VesselType; marketCondition: MarketCondition; portCongestion: Congestion; forecastRange: ForecastRange; contractDuration: string; vesselAvailability: number }) {
-  const freight = calculateFreight(input.cargoQuantity, input.marketCondition, input.forecastRange, input.origin, input.destination, input.commodity)
+  const freight = calculateFreight(input.cargoQuantity, input.marketCondition, input.forecastRange, input.origin, input.destination, input.commodity, input.laycanStart, input.laycanEnd)
   const commodityFit = input.commodity === 'Iron Ore' ? 1.08 : input.commodity === 'Bauxite' ? 0.96 : input.commodity === 'Grain' ? 0.92 : 1
   const ranked = rankVessels(input.cargoQuantity * commodityFit, input.vesselPreference, input.portCongestion, input.vesselAvailability)
   const selected = input.vesselPreference === 'Auto Select' ? ranked[0] : ranked.find((vessel) => vessel.name === input.vesselPreference) ?? ranked[0]
   const port = calculatePort(selected, input.destination, input.cargoQuantity)
   const risk = calculateRisk(input.marketCondition, input.portCongestion, selected.availability, freight.change, port.score, input.cargoQuantity)
   const cost = calculateCost(input.cargoQuantity, freight.current, selected, risk.score, input.portCongestion)
-  const strategy = calculateStrategy(freight.change, freight.confidence, risk.score, input.cargoQuantity, cost.costPerMT, input.contractDuration, input.vesselAvailability, input.portCongestion)
+  const strategy = calculateStrategy(freight.change, freight.confidence, risk.score, input.cargoQuantity, cost.costPerMT, input.contractDuration, input.vesselAvailability, input.portCongestion, freight.urgency)
   return { freight, ranked, selected, port, risk, cost, strategy }
 }
 
@@ -111,7 +115,7 @@ export function chartData(freight: ReturnType<typeof calculateFreight>, range: F
   return freight.points.slice(0, count).map((rate, index) => ({ day: index === count - 1 ? `+${horizon(range)}D` : index === 0 ? 'Today' : `+${index * Math.ceil(horizon(range) / count)}D`, rate, forecast: index >= count - 2 ? Number((freight.current + (freight.forecast - freight.current) * Math.max(0, index - (count - 2))).toFixed(2)) : null, confidence: Math.max(72, freight.confidence - index * 2) }))
 }
 
-export const defaultVoyage = { origin: 'Muara Berau, Indonesia', destination: 'Paradip Port, India', commodity: 'Thermal Coal', cargoQuantity: 80000, deliveryDate: '12–15 October 2026', vesselPreference: 'Auto Select' as VesselType, selectedVessel: 'Panamax' as VesselType, contractDuration: 'Short-Term', charterPreference: 'Flexible', marketPreference: 'Flexible', marketCondition: 'Stable' as MarketCondition, portCongestion: 'Low' as Congestion, vesselAvailability: 72, forecastRange: '30D' as ForecastRange, laycanWindow: '12–15 Oct 2026' }
+export const defaultVoyage = { origin: 'Muara Berau, Indonesia', destination: 'Paradip Port, India', commodity: 'Thermal Coal', cargoQuantity: 80000, deliveryDate: '12–15 October 2026', vesselPreference: 'Auto Select' as VesselType, selectedVessel: 'Panamax' as VesselType, contractDuration: 'Short-Term', charterPreference: 'Flexible', marketPreference: 'Flexible', marketCondition: 'Stable' as MarketCondition, portCongestion: 'Low' as Congestion, vesselAvailability: 72, forecastRange: '30D' as ForecastRange, laycanWindow: '12–15 Oct 2026', laycanStart: '2026-10-12', laycanEnd: '2026-10-15' }
 
 export type VoyageState = typeof defaultVoyage
 export function getVoyageResult(state: VoyageState) { return calculateVoyage(state) }

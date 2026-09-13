@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronRight, Compass, Save, Sparkles } from 'lucide-react'
 import VoyageLayout from '@/components/voyage-layout'
 import { useVoyage } from '@/lib/voyage-context'
@@ -8,6 +8,34 @@ import { useVoyage } from '@/lib/voyage-context'
 export default function VoyagePlannerPage() {
   const { state, updateState, outputs } = useVoyage()
   const [saved, setSaved] = useState(false)
+  const [laycanOpen, setLaycanOpen] = useState(false)
+  const [laycanDraft, setLaycanDraft] = useState({ start: state.laycanStart, end: state.laycanEnd })
+  const laycanRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!laycanOpen) setLaycanDraft({ start: state.laycanStart, end: state.laycanEnd })
+  }, [state.laycanStart, state.laycanEnd, laycanOpen])
+
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (laycanRef.current && !laycanRef.current.contains(event.target as Node)) setLaycanOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [])
+
+  const formatLaycan = (start: string, end: string) => {
+    const startDate = new Date(`${start}T00:00:00`)
+    const endDate = new Date(`${end}T00:00:00`)
+    const month = new Intl.DateTimeFormat('en', { month: 'short' })
+    return start === end ? `${startDate.getDate()} ${month.format(startDate)} ${startDate.getFullYear()}` : `${startDate.getDate()}–${endDate.getDate()} ${month.format(endDate)} ${endDate.getFullYear()}`
+  }
+
+  const applyLaycan = () => {
+    if (laycanDraft.start > laycanDraft.end) return
+    updateState({ laycanStart: laycanDraft.start, laycanEnd: laycanDraft.end, laycanWindow: formatLaycan(laycanDraft.start, laycanDraft.end) })
+    setLaycanOpen(false)
+  }
 
   const savePlan = () => {
     updateState({ ...state })
@@ -34,8 +62,8 @@ export default function VoyagePlannerPage() {
             <label className="flex flex-col gap-2"><span className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#7b8999]">Cargo quantity (MT)</span><input type="number" value={state.cargoQuantity} onChange={(e) => updateState({ cargoQuantity: Number(e.target.value) || 0 })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 font-mono text-sm text-[#0b1f3a] outline-none focus:border-[#087cb8]" /></label>
             <label className="flex flex-col gap-2"><span className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#7b8999]">Origin</span><select value={state.origin} onChange={(e) => updateState({ origin: e.target.value })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-sm text-[#0b1f3a] outline-none focus:border-[#087cb8]"><option>Muara Berau, Indonesia</option><option>Taboneo, Indonesia</option><option>Samarinda, Indonesia</option><option>Newcastle, Australia</option><option>Richards Bay, South Africa</option></select></label>
             <label className="flex flex-col gap-2"><span className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#7b8999]">Destination</span><select value={state.destination} onChange={(e) => updateState({ destination: e.target.value })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-sm text-[#0b1f3a] outline-none focus:border-[#087cb8]"><option>Paradip Port, India</option><option>Mundra Port, India</option><option>Krishnapatnam Port, India</option><option>Kandla Port, India</option><option>Visakhapatnam Port, India</option></select></label>
-            <label className="flex flex-col gap-2"><span className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#7b8999]">Laycan window</span><input value={state.laycanWindow} onChange={(e) => updateState({ laycanWindow: e.target.value })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-sm text-[#0b1f3a] outline-none focus:border-[#087cb8]" /></label>
-            <label className="flex flex-col gap-2"><span className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#7b8999]">Vessel preference</span><input value={state.vesselPreference} onChange={(e) => updateState({ vesselPreference: e.target.value })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-sm text-[#0b1f3a] outline-none focus:border-[#087cb8]" /></label>
+            <div ref={laycanRef} className="relative flex flex-col gap-2"><span className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#7b8999]">Laycan window</span><button type="button" aria-expanded={laycanOpen} onClick={() => setLaycanOpen(!laycanOpen)} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-left text-sm text-[#0b1f3a] outline-none focus:border-[#087cb8]">{state.laycanWindow}</button>{laycanOpen && <div className="absolute left-0 top-[66px] z-30 w-[min(340px,calc(100vw-48px))] rounded-md border border-[#d8dee8] bg-white p-4 shadow-xl"><div className="mb-3 flex items-center justify-between"><div><div className="text-xs font-bold text-[#0b1f3a]">Select laycan range</div><div className="mt-1 text-[10px] text-[#7b8999]">Start and end dates drive urgency.</div></div><button type="button" onClick={() => setLaycanDraft({ start: '', end: '' })} className="text-[10px] font-semibold text-[#087cb8]">Clear</button></div><div className="grid grid-cols-2 gap-3"><label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-[.1em] text-[#7b8999]">Start<input type="date" value={laycanDraft.start} onChange={(e) => setLaycanDraft({ ...laycanDraft, start: e.target.value })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-2 py-2 text-xs font-normal normal-case tracking-normal text-[#0b1f3a]" /></label><label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-[.1em] text-[#7b8999]">End<input type="date" value={laycanDraft.end} min={laycanDraft.start || undefined} onChange={(e) => setLaycanDraft({ ...laycanDraft, end: e.target.value })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-2 py-2 text-xs font-normal normal-case tracking-normal text-[#0b1f3a]" /></label></div><div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setLaycanOpen(false)} className="rounded-md border border-[#d7e0ea] px-3 py-2 text-xs font-semibold text-[#718095]">Cancel</button><button type="button" disabled={!laycanDraft.start || !laycanDraft.end} onClick={applyLaycan} className="rounded-md bg-[#087cb8] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Apply</button></div></div>}</div>
+            <label className="flex flex-col gap-2"><span className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#7b8999]">Vessel preference</span><select value={state.vesselPreference} onChange={(e) => updateState({ vesselPreference: e.target.value as 'Auto Select' | 'Handysize' | 'Supramax' | 'Panamax' | 'Capesize' })} className="rounded-md border border-[#d7e0ea] bg-[#fbfcfe] px-3 py-2.5 text-sm text-[#0b1f3a] outline-none focus:border-[#087cb8]"><option>Auto Select</option><option>Handysize</option><option>Supramax</option><option>Panamax</option><option>Capesize</option></select></label>
           </div>
         </section>
 
