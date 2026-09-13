@@ -1,2 +1,2 @@
-import VoyageIQModulePage from '@/components/voyageiq-module-page'
-export default function WhatIfSimulatorPage() { return <VoyageIQModulePage route="/what-if-simulator" /> }
+import VoyageIQDashboard from '@/components/voyageiq-dashboard'
+export default function WhatIfSimulatorPage() { return <VoyageIQDashboard /> }
