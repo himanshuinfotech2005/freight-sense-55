@@ -90,7 +90,7 @@ export function calculateStrategy(freightChange: number, confidence: number, ris
   return { recommendation, lockPercentage, expectedSavings, reasons: [`${freightChange < 0 ? 'Softening' : freightChange > 0 ? 'Rising' : 'Stable'} freight curve`, `${confidence}% model confidence`, `Risk score ${risk}/100`] }
 }
 
-export function calculateVoyage(input: { cargoQuantity: number; origin: string; destination: string; vesselPreference: VesselType; marketCondition: MarketCondition; portCongestion: Congestion; forecastRange: ForecastRange; contractDuration: string; vesselAvailability: number }) {
+export function calculateVoyage(input: { cargoQuantity: number; origin: string; destination: string; commodity: string; vesselPreference: VesselType; marketCondition: MarketCondition; portCongestion: Congestion; forecastRange: ForecastRange; contractDuration: string; vesselAvailability: number }) {
   const freight = calculateFreight(input.cargoQuantity, input.marketCondition, input.forecastRange, input.origin, input.destination, input.commodity)
   const commodityFit = input.commodity === 'Iron Ore' ? 1.08 : input.commodity === 'Bauxite' ? 0.96 : input.commodity === 'Grain' ? 0.92 : 1
   const ranked = rankVessels(input.cargoQuantity * commodityFit, input.vesselPreference, input.portCongestion, input.vesselAvailability)
