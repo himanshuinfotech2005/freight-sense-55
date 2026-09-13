@@ -1,2 +1,2 @@
-import VoyageIQDashboard from '@/components/voyageiq-dashboard'
-export default function PortCompatibilityPage() { return <VoyageIQDashboard /> }
+import VoyageIQModulePage from '@/components/voyageiq-module-page'
+export default function PortCompatibilityPage() { return <VoyageIQModulePage route="/port-compatibility" /> }

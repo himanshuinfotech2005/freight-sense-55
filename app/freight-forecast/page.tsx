@@ -1,2 +1,2 @@
-import VoyageIQDashboard from '@/components/voyageiq-dashboard'
-export default function FreightForecastPage() { return <VoyageIQDashboard /> }
+import VoyageIQModulePage from '@/components/voyageiq-module-page'
+export default function FreightForecastPage() { return <VoyageIQModulePage route="/freight-forecast" /> }
